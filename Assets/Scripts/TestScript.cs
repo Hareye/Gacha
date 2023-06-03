@@ -11,7 +11,7 @@ public class TestScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        StartCoroutine(getRequest(endpoints.testRoute));
+        StartCoroutine(getRequest(endpoints.testServer));
     }
 
     IEnumerator getRequest(string uri)
@@ -22,7 +22,7 @@ public class TestScript : MonoBehaviour
         if (uwr.result == UnityWebRequest.Result.ConnectionError)
         {
             Debug.Log("Error while sending: " + uwr.error);
-        } else
+        } else if (uwr.responseCode == 200)
         {
             Debug.Log("Received: " + uwr.downloadHandler.text);
         }
