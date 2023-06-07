@@ -2,19 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
-using urls;
 
-public class TestScript : MonoBehaviour
+public class ServerManager : MonoBehaviour
 {
-    Endpoints endpoints = new Endpoints();
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        //StartCoroutine(getRequest(endpoints.testServer));
-        //StartCoroutine(authenticateUser(endpoints.testForm));
-    }
-
     public IEnumerator authenticateUser(string uri, string email, string password)
     {
         List<IMultipartFormSection> formData = new List<IMultipartFormSection>();
@@ -27,7 +17,8 @@ public class TestScript : MonoBehaviour
         if (uwr.result == UnityWebRequest.Result.ConnectionError)
         {
             Debug.Log("Error while sending: " + uwr.error);
-        } else if (uwr.responseCode == 200)
+        }
+        else if (uwr.responseCode == 200)
         {
             Debug.Log("Received: " + uwr.downloadHandler.text);
         }
@@ -41,7 +32,8 @@ public class TestScript : MonoBehaviour
         if (uwr.result == UnityWebRequest.Result.ConnectionError)
         {
             Debug.Log("Error while sending: " + uwr.error);
-        } else if (uwr.responseCode == 200)
+        }
+        else if (uwr.responseCode == 200)
         {
             Debug.Log("Received: " + uwr.downloadHandler.text);
         }

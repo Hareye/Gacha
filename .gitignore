@@ -72,4 +72,5 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
 /server
-/Assets/Scripts/Endpoints.*
+/Assets/Scripts/Util/Endpoints.*
+/Gacha-Idea.txt
