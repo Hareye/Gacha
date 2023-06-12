@@ -11,6 +11,7 @@ public class TitleManager : MonoBehaviour
     public GameObject panel;
     public GameObject login;
     public GameObject register;
+    public GameObject forgotPassword;
     public GameObject startButton;
 
     private GameObject lEmailField;
@@ -22,20 +23,30 @@ public class TitleManager : MonoBehaviour
     private GameObject rEmailField;
     private GameObject rPasswordField;
     private GameObject rRegisterButton;
-    private GameObject rEmailVerification;
-    private GameObject rUserExists;
-    private GameObject rInvalid;
+    private GameObject rErrorMessage;
+
+    private GameObject fEmailField;
+    private GameObject fErrorMessage;
 
     private Animator panelAnimator;
 
     private ServerManager server;
     private Endpoints endpoints = new Endpoints();
 
+    /*
+     *  Still need to implement forgot password
+     */
+
     void Awake()
     {
         if (!PlayerPrefs.HasKey("rememberMe"))
         {
             PlayerPrefs.SetInt("rememberMe", 0);
+            PlayerPrefs.Save();
+        }
+        if (!PlayerPrefs.HasKey("accessToken"))
+        {
+            PlayerPrefs.SetString("accessToken", null);
             PlayerPrefs.Save();
         }
 
@@ -48,9 +59,10 @@ public class TitleManager : MonoBehaviour
         rEmailField = register.transform.Find("Email").gameObject;
         rPasswordField = register.transform.Find("Password").gameObject;
         rRegisterButton = register.transform.Find("Register Button").gameObject;
-        rEmailVerification = register.transform.Find("Email Verification").gameObject;
-        rUserExists = register.transform.Find("User Exists").gameObject;
-        rInvalid = register.transform.Find("Invalid").gameObject;
+        rErrorMessage = register.transform.Find("Error Message").gameObject;
+
+        fEmailField = forgotPassword.transform.Find("Email").gameObject;
+        fErrorMessage = forgotPassword.transform.Find("Error Message").gameObject;
 
         panelAnimator = panel.GetComponent<Animator>();
         server = GetComponent<ServerManager>();
@@ -64,21 +76,7 @@ public class TitleManager : MonoBehaviour
         {
             lEmailField.GetComponent<TMP_InputField>().text = PlayerPrefs.GetString("email");
             lRememberMe.GetComponent<Toggle>().isOn = true;
-
-            if (PlayerPrefs.HasKey("accessToken"))
-            {
-                Debug.Log("Auto Login");
-                StartCoroutine(loginProcess(PlayerPrefs.GetString("email"), "empty", PlayerPrefs.GetString("accessToken")));
-            }
-        }
-    }
-
-    private void OnApplicationQuit()
-    {
-        if (PlayerPrefs.GetInt("rememberMe") == 0 && PlayerPrefs.HasKey("accessToken"))
-        {
-            PlayerPrefs.DeleteKey("accessToken");
-            PlayerPrefs.Save();
+            StartCoroutine(loginProcess(PlayerPrefs.GetString("email"), "no password"));
         }
     }
 
@@ -98,11 +96,12 @@ public class TitleManager : MonoBehaviour
         {
             Debug.Log("Remember Me: Off");
             PlayerPrefs.SetInt("rememberMe", 0);
+            PlayerPrefs.SetString("accessToken", null);
             PlayerPrefs.DeleteKey("email");
             PlayerPrefs.Save();
         }
 
-        StartCoroutine(loginProcess(email, password, "empty"));
+        StartCoroutine(loginProcess(email, password));
     }
 
     public void startRegister()
@@ -111,6 +110,13 @@ public class TitleManager : MonoBehaviour
         string password = rPasswordField.GetComponent<TMP_InputField>().text;
 
         StartCoroutine(registerProcess(email, password));
+    }
+
+    public void resetPassword()
+    {
+        string email = fEmailField.GetComponent<TMP_InputField>().text;
+
+        StartCoroutine(resetProcess(email));
     }
 
     public void playPanelAnimation(string name)
@@ -125,10 +131,10 @@ public class TitleManager : MonoBehaviour
 
         if (email.Length > 0 && password.Length > 0)
         {
-            button.GetComponent<Image>().color = new Color32(148, 121, 173, 255);
+            button.GetComponent<Button>().interactable = true;
         } else
         {
-            button.GetComponent<Image>().color = new Color32(106, 106, 106, 255);
+            button.GetComponent<Button>().interactable = false;
         }
     }
 
@@ -144,53 +150,74 @@ public class TitleManager : MonoBehaviour
 
         string status = registerCoroutine.Current as string;
 
-        if (status.Equals("invalid"))
-        {
-            // Invalid email or password inputs
-            rEmailField.GetComponent<Outline>().enabled = true;
-            rPasswordField.GetComponent<Outline>().enabled = true;
-            rEmailVerification.SetActive(false);
-            rUserExists.SetActive(false);
-            rInvalid.SetActive(true);
-        } else if (status.Equals("true"))
+        if (status.Equals("success"))
         {
             // Register success
             rEmailField.GetComponent<Outline>().enabled = false;
             rPasswordField.GetComponent<Outline>().enabled = false;
-            rEmailVerification.SetActive(true);
-            rUserExists.SetActive(false);
-            rInvalid.SetActive(false);
-        } else
+            rErrorMessage.SetActive(true);
+            rErrorMessage.GetComponent<TextMeshProUGUI>().text = "A verification email has been sent";
+
+        } else if (status.Equals("invalid_fields") || status.Equals("user_exists"))
         {
-            // Register failed (user already exists)
+            // Register failed
             rEmailField.GetComponent<Outline>().enabled = true;
             rPasswordField.GetComponent<Outline>().enabled = true;
-            rEmailVerification.SetActive(false);
-            rUserExists.SetActive(true);
-            rInvalid.SetActive(false);
+            rErrorMessage.SetActive(true);
+
+            if (status.Equals("invalid_fields"))
+            {
+                rErrorMessage.GetComponent<TextMeshProUGUI>().text = "Invalid email or password";
+            } else if (status.Equals("user_exists"))
+            {
+                rErrorMessage.GetComponent<TextMeshProUGUI>().text = "A user with that email already exists";
+            }
         }
     }
 
-    public IEnumerator loginProcess(string email, string password, string accessToken)
+    public IEnumerator loginProcess(string email, string password)
     {
-        IEnumerator loginCoroutine = server.loginUser(endpoints.login, email, password, accessToken);
+        IEnumerator loginCoroutine = server.loginUser(endpoints.login, email, password);
         yield return StartCoroutine(loginCoroutine);
 
         string status = loginCoroutine.Current as string;
 
-        if (status.Equals("true"))
+        if (status.Equals("expired"))
         {
-            // Login success
-            lEmailField.GetComponent<Outline>().enabled = false;
-            lPasswordField.GetComponent<Outline>().enabled = false;
-        } else if (status.Equals("invalid"))
+            // Login failed (accessToken expired)
+            PlayerPrefs.SetString("accessToken", null);
+            PlayerPrefs.Save();
+        } else if (status.Equals("not_verified") || status.Equals("invalid_fields"))
         {
             // Login failed (invalid inputs or user failed to verify)
             lEmailField.GetComponent<Outline>().enabled = true;
             lPasswordField.GetComponent<Outline>().enabled = true;
         } else
         {
-            // Access token expired
+            // Login success (refresh accessToken)
+            PlayerPrefs.SetString("accessToken", status);
+            PlayerPrefs.Save();
+
+            lEmailField.GetComponent<Outline>().enabled = false;
+            lPasswordField.GetComponent<Outline>().enabled = false;
+        }
+    }
+
+    public IEnumerator resetProcess(string email)
+    {
+        IEnumerator resetCoroutine = server.resetPassword(endpoints.resetPassword, email);
+        yield return StartCoroutine(resetCoroutine);
+
+        string status = resetCoroutine.Current as string;
+
+        if (status.Equals("invalid_fields"))
+        {
+            // Email is invalid
+            fErrorMessage.SetActive(false);
+        } else
+        {
+            // Email was sent successfully
+            fErrorMessage.SetActive(true);
         }
     }
 }
