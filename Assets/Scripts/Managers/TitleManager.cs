@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Collections;
 using UnityEngine.UI;
 using UnityEngine;
@@ -17,7 +16,6 @@ public class TitleManager : MonoBehaviour
     private GameObject lEmailField;
     private GameObject lPasswordField;
     private GameObject lLoginButton;
-    private GameObject lForgotPassword;
     private GameObject lRememberMe;
 
     private GameObject rEmailField;
@@ -26,16 +24,14 @@ public class TitleManager : MonoBehaviour
     private GameObject rErrorMessage;
 
     private GameObject fEmailField;
+    private GameObject fSendButton;
     private GameObject fErrorMessage;
 
     private Animator panelAnimator;
 
     private ServerManager server;
+    private LevelManager levelManager;
     private Endpoints endpoints = new Endpoints();
-
-    /*
-     *  Still need to implement forgot password
-     */
 
     void Awake()
     {
@@ -53,7 +49,6 @@ public class TitleManager : MonoBehaviour
         lEmailField = login.transform.Find("Email").gameObject;
         lPasswordField = login.transform.Find("Password").gameObject;
         lLoginButton = login.transform.Find("Login Button").gameObject;
-        lForgotPassword = login.transform.Find("Forgot Password").gameObject;
         lRememberMe = login.transform.Find("Remember Me").gameObject;
 
         rEmailField = register.transform.Find("Email").gameObject;
@@ -62,15 +57,18 @@ public class TitleManager : MonoBehaviour
         rErrorMessage = register.transform.Find("Error Message").gameObject;
 
         fEmailField = forgotPassword.transform.Find("Email").gameObject;
+        fSendButton = forgotPassword.transform.Find("Reset Button").gameObject;
         fErrorMessage = forgotPassword.transform.Find("Error Message").gameObject;
 
         panelAnimator = panel.GetComponent<Animator>();
         server = GetComponent<ServerManager>();
+        levelManager = GetComponent<LevelManager>();
 
         lEmailField.GetComponent<TMP_InputField>().onValueChanged.AddListener(delegate { onEdit(lEmailField, lPasswordField, lLoginButton); });
         lPasswordField.GetComponent<TMP_InputField>().onValueChanged.AddListener(delegate { onEdit(lEmailField, lPasswordField, lLoginButton); });
         rEmailField.GetComponent<TMP_InputField>().onValueChanged.AddListener(delegate { onEdit(rEmailField, rPasswordField, rRegisterButton); });
         rPasswordField.GetComponent<TMP_InputField>().onValueChanged.AddListener(delegate { onEdit(rEmailField, rPasswordField, rRegisterButton); });
+        fEmailField.GetComponent<TMP_InputField>().onValueChanged.AddListener(delegate { onEdit(fEmailField, null, fSendButton); });
 
         if (PlayerPrefs.HasKey("email") && PlayerPrefs.GetInt("rememberMe") == 1)
         {
@@ -127,14 +125,29 @@ public class TitleManager : MonoBehaviour
     public void onEdit(GameObject emailField, GameObject passwordField, GameObject button)
     {
         string email = emailField.GetComponent<TMP_InputField>().text;
-        string password = passwordField.GetComponent<TMP_InputField>().text;
 
-        if (email.Length > 0 && password.Length > 0)
+        if (passwordField == null)
         {
-            button.GetComponent<Button>().interactable = true;
+            if (email.Length > 0)
+            {
+                button.GetComponent<Button>().interactable = true;
+            }
+            else
+            {
+                button.GetComponent<Button>().interactable = false;
+            }
         } else
         {
-            button.GetComponent<Button>().interactable = false;
+            string password = passwordField.GetComponent<TMP_InputField>().text;
+
+            if (email.Length > 0 && password.Length > 0)
+            {
+                button.GetComponent<Button>().interactable = true;
+            }
+            else
+            {
+                button.GetComponent<Button>().interactable = false;
+            }
         }
     }
 
@@ -200,6 +213,8 @@ public class TitleManager : MonoBehaviour
 
             lEmailField.GetComponent<Outline>().enabled = false;
             lPasswordField.GetComponent<Outline>().enabled = false;
+
+            levelManager.loadLevel("Main");
         }
     }
 
