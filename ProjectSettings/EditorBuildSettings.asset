@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Main.unity
     guid: 8cbd2bbab3f03364fbfd42799360bd24
+  - enabled: 1
+    path: Assets/Scenes/Gacha.unity
+    guid: 21481fbf19edbfe4392b6a135b205016
   m_configObjects: {}

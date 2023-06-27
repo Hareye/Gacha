@@ -15,17 +15,25 @@ public class LevelManager : MonoBehaviour
     [SerializeField]
     public TextMeshProUGUI loadingText;
 
+    [SerializeField]
+    public Animator transition;
+
+    public float transitionTime = 1f;
+
     public void loadLevel(string levelName)
     {
         Debug.Log("Loading new scene: " + levelName);
 
-        loading.SetActive(true);
         StartCoroutine(loadSceneAsync(levelName));
     }
 
     IEnumerator loadSceneAsync(string levelName)
     {
+        transition.SetTrigger("Start");
+        yield return new WaitForSeconds(transitionTime);
+
         AsyncOperation op = SceneManager.LoadSceneAsync(levelName);
+        loading.SetActive(true);
 
         while (!op.isDone)
         {
