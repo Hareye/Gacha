@@ -1,41 +1,23 @@
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.Networking;
 using urls;
+using encryption;
 
 public class ServerManager : MonoBehaviour
 {
     private Endpoints endpoints = new Endpoints();
+    private Encryption encryption = new Encryption();
 
-    public IEnumerator loginUser(string uri, string email, string password)
+    public IEnumerator sendRequest(string uri, List<KeyValuePair<string, string>> parameters)
     {
         List<IMultipartFormSection> formData = new List<IMultipartFormSection>();
-        formData.Add(new MultipartFormDataSection("email", email));
-        formData.Add(new MultipartFormDataSection("password", password));
-
-        // UnityWebRequest automatically sets Content-Type
-        UnityWebRequest uwr = UnityWebRequest.Post(uri, formData);
-        uwr.SetRequestHeader("Authorization", PlayerPrefs.GetString("accessToken"));
-
-        yield return uwr.SendWebRequest();
-
-        if (uwr.result == UnityWebRequest.Result.ConnectionError)
+        foreach (KeyValuePair<string, string> param in parameters)
         {
-            Debug.Log("Error while sending: " + uwr.error);
+            formData.Add(new MultipartFormDataSection(param.Key, param.Value));
         }
-        else if (uwr.responseCode == 200)
-        {
-            Debug.Log("loginUser: " + uwr.downloadHandler.text);
-            yield return uwr.downloadHandler.text;
-        }
-    }
-
-    public IEnumerator registerUser(string uri, string email, string password)
-    {
-        List<IMultipartFormSection> formData = new List<IMultipartFormSection>();
-        formData.Add(new MultipartFormDataSection("email", email));
-        formData.Add(new MultipartFormDataSection("password", password));
 
         // UnityWebRequest automatically sets Content-Type
         UnityWebRequest uwr = UnityWebRequest.Post(uri, formData);
@@ -48,18 +30,22 @@ public class ServerManager : MonoBehaviour
         }
         else if (uwr.responseCode == 200)
         {
-            Debug.Log("registerUser: " + uwr.downloadHandler.text);
             yield return uwr.downloadHandler.text;
         }
     }
 
-    public IEnumerator resetPassword(string uri, string email)
+    public IEnumerator sendPullRequest(string uri, List<KeyValuePair<string, string>> parameters)
     {
         List<IMultipartFormSection> formData = new List<IMultipartFormSection>();
-        formData.Add(new MultipartFormDataSection("email", email));
+        foreach (KeyValuePair<string, string> param in parameters)
+        {
+            formData.Add(new MultipartFormDataSection(param.Key, param.Value));
+        }
 
         // UnityWebRequest automatically sets Content-Type
         UnityWebRequest uwr = UnityWebRequest.Post(uri, formData);
+        uwr.SetRequestHeader("authToken", encryption.decrypt(PlayerPrefs.GetString("authToken")));
+        //Debug.Log(encryption.decrypt(PlayerPrefs.GetString("authToken")));
 
         yield return uwr.SendWebRequest();
 
@@ -69,7 +55,7 @@ public class ServerManager : MonoBehaviour
         }
         else
         {
-            Debug.Log("resetPassword: " + uwr.downloadHandler.text);
+            //Debug.Log("gachaPull: " + uwr.downloadHandler.text);
             yield return uwr.downloadHandler.text;
         }
     }

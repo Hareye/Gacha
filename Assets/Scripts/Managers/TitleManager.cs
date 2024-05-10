@@ -1,8 +1,17 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.UI;
 using UnityEngine;
 using TMPro;
 using urls;
+using encryption;
+
+/*
+ *  TO-DO
+ *      - Add another login "screen"/page
+ *          - When user logs in, they have to click the screen to go to game screen
+ *          - Give user option to log out of the account, bringing them back to the login "screen"/page
+ */
 
 public class TitleManager : MonoBehaviour
 {
@@ -32,20 +41,10 @@ public class TitleManager : MonoBehaviour
     private ServerManager server;
     private LevelManager levelManager;
     private Endpoints endpoints = new Endpoints();
+    private Encryption encryption = new Encryption();
 
     void Awake()
     {
-        if (!PlayerPrefs.HasKey("rememberMe"))
-        {
-            PlayerPrefs.SetInt("rememberMe", 0);
-            PlayerPrefs.Save();
-        }
-        if (!PlayerPrefs.HasKey("accessToken"))
-        {
-            PlayerPrefs.SetString("accessToken", null);
-            PlayerPrefs.Save();
-        }
-
         lEmailField = login.transform.Find("Email").gameObject;
         lPasswordField = login.transform.Find("Password").gameObject;
         lLoginButton = login.transform.Find("Login Button").gameObject;
@@ -70,11 +69,12 @@ public class TitleManager : MonoBehaviour
         rPasswordField.GetComponent<TMP_InputField>().onValueChanged.AddListener(delegate { onEdit(rEmailField, rPasswordField, rRegisterButton); });
         fEmailField.GetComponent<TMP_InputField>().onValueChanged.AddListener(delegate { onEdit(fEmailField, null, fSendButton); });
 
-        if (PlayerPrefs.HasKey("email") && PlayerPrefs.GetInt("rememberMe") == 1)
+        if (PlayerPrefs.HasKey("rememberToken"))
         {
-            lEmailField.GetComponent<TMP_InputField>().text = PlayerPrefs.GetString("email");
-            lRememberMe.GetComponent<Toggle>().isOn = true;
-            StartCoroutine(loginProcess(PlayerPrefs.GetString("email"), "no password"));
+            //Debug.Log("Auto login");
+            //Debug.Log(PlayerPrefs.GetString("rememberToken"));
+
+            StartCoroutine(verifyRememberProcess(PlayerPrefs.GetString("rememberToken")));
         }
     }
 
@@ -82,24 +82,9 @@ public class TitleManager : MonoBehaviour
     {
         string email = lEmailField.GetComponent<TMP_InputField>().text;
         string password = lPasswordField.GetComponent<TMP_InputField>().text;
+        bool rememberMe = lRememberMe.GetComponent<Toggle>().isOn;
 
-        if (lRememberMe.GetComponent<Toggle>().isOn)
-        {
-            Debug.Log("Remember Me: On");
-            PlayerPrefs.SetInt("rememberMe", 1);
-            PlayerPrefs.SetString("email", email);
-            PlayerPrefs.Save();
-        }
-        else
-        {
-            Debug.Log("Remember Me: Off");
-            PlayerPrefs.SetInt("rememberMe", 0);
-            PlayerPrefs.SetString("accessToken", null);
-            PlayerPrefs.DeleteKey("email");
-            PlayerPrefs.Save();
-        }
-
-        StartCoroutine(loginProcess(email, password));
+        StartCoroutine(loginProcess(email, password, rememberMe));
     }
 
     public void startRegister()
@@ -158,7 +143,13 @@ public class TitleManager : MonoBehaviour
 
     public IEnumerator registerProcess(string email, string password)
     {
-        IEnumerator registerCoroutine = server.registerUser(endpoints.register, email, password);
+        var list = new List<KeyValuePair<string, string>>()
+        {
+            new KeyValuePair<string, string>("email", email),
+            new KeyValuePair<string, string>("password", password),
+        };
+
+        IEnumerator registerCoroutine = server.sendRequest(endpoints.register, list);
         yield return StartCoroutine(registerCoroutine);
 
         string status = registerCoroutine.Current as string;
@@ -188,19 +179,22 @@ public class TitleManager : MonoBehaviour
         }
     }
 
-    public IEnumerator loginProcess(string email, string password)
+    public IEnumerator loginProcess(string email, string password, bool rememberMe)
     {
-        IEnumerator loginCoroutine = server.loginUser(endpoints.login, email, password);
+        var list = new List<KeyValuePair<string, string>>()
+        {
+            new KeyValuePair<string, string>("email", email),
+            new KeyValuePair<string, string>("password", password),
+        };
+
+        IEnumerator loginCoroutine = server.sendRequest(endpoints.login, list);
         yield return StartCoroutine(loginCoroutine);
 
         string status = loginCoroutine.Current as string;
 
-        if (status.Equals("expired"))
-        {
-            // Login failed (accessToken expired)
-            PlayerPrefs.SetString("accessToken", null);
-            PlayerPrefs.Save();
-        } else if (status.Equals("not_verified") || status.Equals("invalid_fields"))
+        Debug.Log(status);
+
+        if (status.Equals("not_verified") || status.Equals("invalid_fields"))
         {
             // Login failed (invalid inputs or user failed to verify)
             lEmailField.GetComponent<Outline>().enabled = true;
@@ -208,19 +202,81 @@ public class TitleManager : MonoBehaviour
         } else
         {
             // Login success (refresh accessToken)
-            PlayerPrefs.SetString("accessToken", status);
-            PlayerPrefs.Save();
-
             lEmailField.GetComponent<Outline>().enabled = false;
             lPasswordField.GetComponent<Outline>().enabled = false;
+
+            yield return StartCoroutine(authProcess(email));
+
+            if (rememberMe)
+            {
+                yield return StartCoroutine(rememberProcess(email));
+            }
 
             levelManager.loadLevel("Main");
         }
     }
 
+    public IEnumerator rememberProcess(string email)
+    {
+        var list = new List<KeyValuePair<string, string>>()
+        {
+            new KeyValuePair<string, string>("email", email),
+        };
+
+        IEnumerator rememberTokenCoroutine = server.sendRequest(endpoints.rememberToken, list);
+        yield return StartCoroutine(rememberTokenCoroutine);
+
+        string status = rememberTokenCoroutine.Current as string;
+
+        if (status.Equals("invalid_fields"))
+        {
+            lEmailField.GetComponent<Outline>().enabled = true;
+            lPasswordField.GetComponent<Outline>().enabled = true;
+        } else
+        {
+            lEmailField.GetComponent<Outline>().enabled = false;
+            lPasswordField.GetComponent<Outline>().enabled = false;
+
+            PlayerPrefs.SetString("rememberToken", encryption.encrypt(status));
+            PlayerPrefs.Save();
+        }
+    }
+
+    public IEnumerator authProcess(string email)
+    {
+        var list = new List<KeyValuePair<string, string>>()
+        {
+            new KeyValuePair<string, string>("email", email),
+        };
+
+        IEnumerator authTokenCoroutine = server.sendRequest(endpoints.authToken, list);
+        yield return StartCoroutine(authTokenCoroutine);
+
+        string status = authTokenCoroutine.Current as string;
+
+        if (status.Equals("invalid_fields"))
+        {
+            lEmailField.GetComponent<Outline>().enabled = true;
+            lPasswordField.GetComponent<Outline>().enabled = true;
+        }
+        else
+        {
+            lEmailField.GetComponent<Outline>().enabled = false;
+            lPasswordField.GetComponent<Outline>().enabled = false;
+
+            PlayerPrefs.SetString("authToken", encryption.encrypt(status));
+            PlayerPrefs.Save();
+        }
+    }
+
     public IEnumerator resetProcess(string email)
     {
-        IEnumerator resetCoroutine = server.resetPassword(endpoints.resetPassword, email);
+        var list = new List<KeyValuePair<string, string>>()
+        {
+            new KeyValuePair<string, string>("email", email),
+        };
+
+        IEnumerator resetCoroutine = server.sendRequest(endpoints.resetPassword, list);
         yield return StartCoroutine(resetCoroutine);
 
         string status = resetCoroutine.Current as string;
@@ -233,6 +289,31 @@ public class TitleManager : MonoBehaviour
         {
             // Email was sent successfully
             fErrorMessage.SetActive(true);
+        }
+    }
+
+    public IEnumerator verifyRememberProcess(string rememberToken)
+    {
+        var list = new List<KeyValuePair<string, string>>()
+        {
+            new KeyValuePair<string, string>("rememberToken", encryption.decrypt(rememberToken)),
+        };
+
+        IEnumerator verifyRememberCoroutine = server.sendRequest(endpoints.verifyRememberToken, list);
+        yield return StartCoroutine(verifyRememberCoroutine);
+
+        string status = verifyRememberCoroutine.Current as string;
+
+        if (status.Equals("not_verified"))
+        {
+            // Remember Token is invalid or has expired
+            PlayerPrefs.DeleteKey("rememberToken");
+            PlayerPrefs.Save();
+        } else
+        {
+            yield return StartCoroutine(authProcess(status));
+
+            levelManager.loadLevel("Main");
         }
     }
 }
