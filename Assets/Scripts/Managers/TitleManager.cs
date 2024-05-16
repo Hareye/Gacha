@@ -107,7 +107,12 @@ public class TitleManager : MonoBehaviour
         panelAnimator.Play(name);
     }
 
-    public void onEdit(GameObject emailField, GameObject passwordField, GameObject button)
+    public void disableButton()
+    {
+        startButton.SetActive(false);
+    }
+
+    private void onEdit(GameObject emailField, GameObject passwordField, GameObject button)
     {
         string email = emailField.GetComponent<TMP_InputField>().text;
 
@@ -136,12 +141,7 @@ public class TitleManager : MonoBehaviour
         }
     }
 
-    public void disableButton()
-    {
-        startButton.SetActive(false);
-    }
-
-    public IEnumerator registerProcess(string email, string password)
+    private IEnumerator registerProcess(string email, string password)
     {
         var list = new List<KeyValuePair<string, string>>()
         {
@@ -179,7 +179,7 @@ public class TitleManager : MonoBehaviour
         }
     }
 
-    public IEnumerator loginProcess(string email, string password, bool rememberMe)
+    private IEnumerator loginProcess(string email, string password, bool rememberMe)
     {
         var list = new List<KeyValuePair<string, string>>()
         {
@@ -216,7 +216,7 @@ public class TitleManager : MonoBehaviour
         }
     }
 
-    public IEnumerator rememberProcess(string email)
+    private IEnumerator rememberProcess(string email)
     {
         var list = new List<KeyValuePair<string, string>>()
         {
@@ -242,7 +242,7 @@ public class TitleManager : MonoBehaviour
         }
     }
 
-    public IEnumerator authProcess(string email)
+    private IEnumerator authProcess(string email)
     {
         var list = new List<KeyValuePair<string, string>>()
         {
@@ -269,7 +269,7 @@ public class TitleManager : MonoBehaviour
         }
     }
 
-    public IEnumerator resetProcess(string email)
+    private IEnumerator resetProcess(string email)
     {
         var list = new List<KeyValuePair<string, string>>()
         {
@@ -292,7 +292,7 @@ public class TitleManager : MonoBehaviour
         }
     }
 
-    public IEnumerator verifyRememberProcess(string rememberToken)
+    private IEnumerator verifyRememberProcess(string rememberToken)
     {
         var list = new List<KeyValuePair<string, string>>()
         {

@@ -34,7 +34,7 @@ public class ServerManager : MonoBehaviour
         }
     }
 
-    public IEnumerator sendPullRequest(string uri, List<KeyValuePair<string, string>> parameters)
+    public IEnumerator sendRequestWithAuth(string uri, List<KeyValuePair<string, string>> parameters)
     {
         List<IMultipartFormSection> formData = new List<IMultipartFormSection>();
         foreach (KeyValuePair<string, string> param in parameters)
