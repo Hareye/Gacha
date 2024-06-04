@@ -6,6 +6,8 @@ using TMPro;
 
 public class LevelManager : MonoBehaviour
 {
+    public static LevelManager instance;
+
     [SerializeField]
     public GameObject loading;
 
@@ -19,6 +21,11 @@ public class LevelManager : MonoBehaviour
     public Animator transition;
 
     public float transitionTime = 1f;
+
+    private void Awake()
+    {
+        instance = this;
+    }
 
     public void loadLevel(string levelName)
     {
