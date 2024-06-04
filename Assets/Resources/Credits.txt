@@ -1,3 +1,48 @@
 bg: https://wallpapercave.com/w/wp4946059
 main: https://www.pxfuel.com/en/desktop-wallpaper-owpru
 gacha: https://www.pxfuel.com/en/desktop-wallpaper-friof
+random bg: https://wallpapercave.com/w/wp6472900
+Chair Icon: https://www.istockphoto.com/vector/school-desk-icon-gm1202291282-345111290
+Card Back: https://www.freepik.com/free-ai-image/anime-style-character-space_122499677.htm
+
+Shiba Miyuki - Snow Queen: Stable Diffusion TMND-Mix Model
+	- LoRA Models:
+		- Add Detail
+		- LoRA Eyes
+		- Miyuki Mahouka by eft
+	- Embeddings:
+		- Deep Negative
+		- Very Bad Image Negative
+		- Bad Hand
+		- Async's Negative
+Shiba Tatsuya - Mahesvara: Official Movie Key Visual
+Chiba Erika - Sword Princess: Stable Diffusion TMND-Mix Model
+	- LoRA Models:
+		- Add Detail
+		- LoRA Eyes
+		- Chiba Erika by eft
+	- Embeddings:
+		- Deep Negative
+		- Very Bad Image Negative
+		- Bad Hand
+		- Async's Negative
+Mitsui Honoka - Elements: Stable Diffusion TMND-Mix Model
+	- LoRA Models:
+		- Add Detail
+		- LoRA Eyes
+		- Mitsui Honoka by eft
+	- Embeddings:
+		- Deep Negative
+		- Very Bad Image Negative
+		- Bad Hand
+		- Async's Negative
+Shiba Tatsuya - The Destroyer: Stable Diffusion TMND-Mix Model
+	- LoRA Models:
+		- Add Detail
+		- LoRA Eyes
+		- Shiba Tatsuya
+	- Embeddings:
+		- Deep Negative
+		- Very Bad Image Negative
+		- Bad Hand
+		- Async's Negative

@@ -3,13 +3,17 @@ using System.Collections.Generic;
 using System;
 using UnityEngine;
 using UnityEngine.Networking;
-using urls;
-using encryption;
 
 public class ServerManager : MonoBehaviour
 {
-    private Endpoints endpoints = new Endpoints();
-    private Encryption encryption = new Encryption();
+    public static ServerManager instance;
+
+    private void Awake()
+    {
+        instance = this;
+        // Don't destroy when implementing persistency
+        //DontDestroyOnLoad(gameObject);
+    }
 
     public IEnumerator sendRequest(string uri, List<KeyValuePair<string, string>> parameters)
     {
@@ -44,8 +48,30 @@ public class ServerManager : MonoBehaviour
 
         // UnityWebRequest automatically sets Content-Type
         UnityWebRequest uwr = UnityWebRequest.Post(uri, formData);
-        uwr.SetRequestHeader("authToken", encryption.decrypt(PlayerPrefs.GetString("authToken")));
-        //Debug.Log(encryption.decrypt(PlayerPrefs.GetString("authToken")));
+        //uwr.SetRequestHeader("authToken", AuthManager.instance.authToken);
+
+        // Temporary - for dev work to test individual screens
+        uwr.SetRequestHeader("authToken", PlayerPrefs.GetString("authToken"));
+
+        yield return uwr.SendWebRequest();
+
+        if (uwr.result == UnityWebRequest.Result.ConnectionError)
+        {
+            Debug.Log("Error while sending: " + uwr.error);
+        }
+        else
+        {
+            //Debug.Log("gachaPull: " + uwr.downloadHandler.text);
+            yield return uwr.downloadHandler.text;
+        }
+    }
+
+    public IEnumerator sendRequestWithAuth(string uri)
+    {
+        UnityWebRequest uwr = UnityWebRequest.Get(uri);
+        //uwr.SetRequestHeader("authToken", AuthManager.instance.authToken);
+
+        uwr.SetRequestHeader("authToken", PlayerPrefs.GetString("authToken"));
 
         yield return uwr.SendWebRequest();
 
