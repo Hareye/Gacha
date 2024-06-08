@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 
 namespace objects
@@ -37,6 +38,7 @@ namespace objects
     [Serializable]
     public class UnitObject
     {
+        public string cardid;
         public string skinname;
         public string charactername;
         public int characterlevel;
@@ -51,5 +53,32 @@ namespace objects
         public int mag;
         public int res;
         public int spd;
+    }
+
+    [Serializable]
+    public class PartyUnit
+    {
+        public int slot;
+        public string cardid;
+        public string skinname;
+        public string charactername;
+        public int characterlevel;
+        public string combattype;
+        public string animename;
+        public string rarity;
+        public string element;
+    }
+
+    [Serializable]
+    public class Party
+    {
+        public string name;
+        public List<PartyUnit> combatUnits;
+        public List<PartyUnit> supportUnits;
+
+        public Party(string n)
+        {
+            name = n;
+        }
     }
 }

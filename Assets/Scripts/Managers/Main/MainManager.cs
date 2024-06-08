@@ -1,5 +1,5 @@
 using System.Collections;
-using System.Collections.Generic;
+using System.IO;
 using UnityEngine.UI;
 using UnityEngine;
 using TMPro;
@@ -13,179 +13,110 @@ public class MainManager : MonoBehaviour
     [SerializeField]
     private GameObject canvas;
 
-    [SerializeField]
-    private GameObject rowPrefab;
-
-    [SerializeField]
-    private GameObject unitPrefab;
-
-    private ServerManager server;
-    private Endpoints endpoints = new Endpoints();
-
     private GameObject homeScreen;
     private GameObject unitScreen;
     private GameObject unitInfoScreen;
-    private bool unitsLoaded;
+    private GameObject partyScreen;
 
-    private Color32 urColor;
-    private Color32 srColor;
-    private Color32 rColor;
+    private GameObject currentScreen;
+    private GameObject currentBody;
+    private GameObject currentBar;
+
+    private GameObject unitScreenList;
+    private GameObject partyScreenList;
+
+    private int unitScreenListWidth = 1750;
+    private int partyScreenListWidth = 1105;
 
     // Start is called before the first frame update
     void Start()
     {
         instance = this;
 
-        server = GetComponent<ServerManager>();
-
         homeScreen = canvas.transform.Find("Home Screen").gameObject;
         unitScreen = canvas.transform.Find("Unit Screen").gameObject;
         unitInfoScreen = canvas.transform.Find("Unit Info Screen").gameObject;
-        unitsLoaded = false;
-        
-        urColor = new Color32(255, 247, 0, 255);
-        srColor = new Color32(185, 67, 255, 255);
-        rColor = new Color32(73, 130, 255, 255);
+        partyScreen = canvas.transform.Find("Party Screen").gameObject;
+
+        currentScreen = homeScreen;
+        currentBody = unitInfoScreen.transform.Find("Panel/Body/Stats").gameObject;
+        currentBar = unitInfoScreen.transform.Find("Panel/Bar/Stats").gameObject;
+
+        unitScreenList = unitScreen.transform.Find("Unit List").gameObject;
+        partyScreenList = partyScreen.transform.Find("Unit List").gameObject;
+    }
+
+    public void showTab(string tab)
+    {
+        setBody(tab);
+        setBar(tab);
     }
 
     public void showScreen(string screen)
     {
-        switch (screen)
+        GameObject nextScreen = canvas.transform.Find(screen + " Screen").gameObject;
+
+        if (currentScreen == nextScreen) return;
+
+        currentScreen.SetActive(false);
+
+        currentScreen = nextScreen;
+        currentScreen.SetActive(true);
+
+        if (screen.Equals("Unit"))
         {
-            case "Home":
-                showHomeScreen();
-                hideUnitScreen();
-                break;
-            case "Unit":
-                if (!unitsLoaded) StartCoroutine(loadUnitsProcess());
-                showUnitScreen();
-                hideUnitInfoScreen();
-                hideHomeScreen();
-                break;
-            case "Unit Info":
-                showUnitInfoScreen();
-                hideUnitScreen();
-                break;
-        }
-    }
-
-    public void setUpUnitInfo(UnitObject unit)
-    {
-        Sprite unitImg = Resources.Load<Sprite>("Characters/" + unit.charactername + " - " + unit.skinname);
-        unitInfoScreen.transform.Find("Display/Splashart").GetComponent<Image>().sprite = unitImg;
-        unitInfoScreen.transform.Find("Display/Name").GetComponent<TextMeshProUGUI>().text = unit.charactername;
-
-        GameObject body = unitInfoScreen.transform.Find("Panel/Body").gameObject;
-        GameObject stats = body.transform.Find("Stats").gameObject;
-        //GameObject tags = body.transform.Find("Tags").gameObject;
-        //GameObject series = body.transform.Find("Series").gameObject;
-
-        switch (unit.rarity)
-        {
-            case "UR":
-                stats.transform.Find("Rarity/Text").GetComponent<TextMeshProUGUI>().color = urColor;
-                break;
-            case "SR":
-                stats.transform.Find("Rarity/Text").GetComponent<TextMeshProUGUI>().color = srColor;
-                break;
-            case "R":
-                stats.transform.Find("Rarity/Text").GetComponent<TextMeshProUGUI>().color = rColor;
-                break;
-        }
-
-        stats.transform.Find("Rarity/Text").GetComponent<TextMeshProUGUI>().text = unit.rarity;
-        stats.transform.Find("Skin Name/Text").GetComponent<TextMeshProUGUI>().text = unit.skinname;
-        stats.transform.Find("Combat Type/Text").GetComponent<TextMeshProUGUI>().text = unit.combattype;
-
-        stats.transform.Find("Details/Element/Text").GetComponent<TextMeshProUGUI>().text = unit.element;
-        stats.transform.Find("Details/Level Text").GetComponent<TextMeshProUGUI>().text = unit.characterlevel + " / 80";
-        stats.transform.Find("Details/XP Bar").GetComponent<Slider>().value = 0f;
-
-        stats.transform.Find("Stats/HP/Text").GetComponent<TextMeshProUGUI>().text = unit.hp.ToString();
-        stats.transform.Find("Stats/DEF/Text").GetComponent<TextMeshProUGUI>().text = unit.def.ToString();
-        stats.transform.Find("Stats/RES/Text").GetComponent<TextMeshProUGUI>().text = unit.res.ToString();
-        stats.transform.Find("Stats/ATK/Text").GetComponent<TextMeshProUGUI>().text = unit.atk.ToString();
-        stats.transform.Find("Stats/MAG/Text").GetComponent<TextMeshProUGUI>().text = unit.mag.ToString();
-        stats.transform.Find("Stats/SPD/Text").GetComponent<TextMeshProUGUI>().text = unit.spd.ToString();
-    }
-
-    private IEnumerator loadUnitsProcess()
-    {
-        Debug.Log("Loading units...");
-
-        // Set up loading here
-
-        IEnumerator unitCoroutine = server.sendRequestWithAuth(endpoints.load);
-        yield return StartCoroutine(unitCoroutine);
-
-        string status = unitCoroutine.Current as string;
-
-        UnitsObject units = JsonUtility.FromJson<UnitsObject>(status);
-        setUpUnitList(units);
-
-        unitsLoaded = true;
-
-        // Finish loading here
-    }
-
-    private void setUpUnitList(UnitsObject units)
-    {
-        GameObject content = unitScreen.transform.Find("Unit List/Characters/Viewport/Content").gameObject;
-        int count = 0;
-        int cardsPerRow = 8;
-
-        float startX = -752.5f;
-        float deltaX = 215f;
-
-        // Initial row
-        GameObject row = Instantiate(rowPrefab, content.transform);
-
-        foreach (UnitObject unit in units.units)
-        {
-            if (count == cardsPerRow)
+            if (!UnitManager.instance.getUnitsLoaded())
             {
-                row = Instantiate(rowPrefab, content.transform);
-                count = 0;
+                StartCoroutine(UnitManager.instance.loadUnits(screen));
+            } else
+            {
+                UnitManager.instance.setUpUnitList(screen);
+            }
+            
+            UnitManager.instance.setUpCharacters(unitScreenList.transform, unitScreenListWidth);
+        }
+
+        if (screen.Equals("Party"))
+        {
+            if (!UnitManager.instance.getUnitsLoaded())
+            {
+                StartCoroutine(UnitManager.instance.loadUnits(screen, "C"));
+            } else
+            {
+                UnitManager.instance.setUpUnitList(screen, "C");
             }
 
-            GameObject newUnit = Instantiate(unitPrefab, row.transform);
-            newUnit.GetComponent<RectTransform>().localPosition = new Vector2(startX + (deltaX * count), 0);
-
-            Sprite unitImg = Resources.Load<Sprite>("Characters/" + unit.charactername + " - " + unit.skinname);
-            newUnit.GetComponent<Image>().sprite = unitImg;
-            newUnit.GetComponent<Unit>().unit = unit;
-
-            count++;
+            UnitManager.instance.setUpCharacters(partyScreenList.transform, partyScreenListWidth);
+            PartyManager.instance.setUpDropdown();
+            PartyManager.instance.switchParty();
         }
     }
 
-    private void showHomeScreen()
+    private void setBody(string tab)
     {
-        homeScreen.SetActive(true);
+        GameObject nextBody = unitInfoScreen.transform.Find("Panel/Body/" + tab).gameObject;
+
+        if (currentBody == nextBody) return;
+
+        Debug.Log("Showing " + tab + " tab...");
+
+        currentBody.SetActive(false);
+
+        currentBody = nextBody;
+        currentBody.SetActive(true);
     }
 
-    private void hideHomeScreen()
+    private void setBar(string tab)
     {
-        homeScreen.SetActive(false);
-    }
+        GameObject nextBar = unitInfoScreen.transform.Find("Panel/Bar/" + tab).gameObject;
 
-    private void showUnitScreen()
-    {
-        unitScreen.SetActive(true);
-    }
+        if (currentBar == nextBar) return;
 
-    private void hideUnitScreen()
-    {
-        unitScreen.SetActive(false);
-    }
+        Sprite selected = Resources.Load<Sprite>("Units/Bookmark Selected");
+        Sprite bookmark = Resources.Load<Sprite>("Units/Bookmark");
 
-    private void showUnitInfoScreen()
-    {
-        unitInfoScreen.SetActive(true);
-    }
-
-    private void hideUnitInfoScreen()
-    {
-        unitInfoScreen.SetActive(false);
+        currentBar.transform.Find("BG").GetComponent<Image>().sprite = bookmark;
+        nextBar.transform.Find("BG").GetComponent<Image>().sprite = selected;
+        currentBar = nextBar;
     }
 }

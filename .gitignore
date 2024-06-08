@@ -75,3 +75,4 @@ crashlytics-build.properties
 /Assets/Scripts/Util/Endpoints.*
 /Assets/Scripts/Util/Encryption.*
 /Gacha-Idea.txt
+/Assets/Resources/Data/*

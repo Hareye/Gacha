@@ -20,7 +20,7 @@ public class MainClickManager : MonoBehaviour
                 {
                     Debug.Log("Hit card...");
 
-                    MainManager.instance.setUpUnitInfo(hit.transform.gameObject.GetComponent<Unit>().unit);
+                    UnitManager.instance.setUpUnitInfo(hit.transform.gameObject.GetComponent<Unit>().unit);
                     MainManager.instance.showScreen("Unit Info");
                 }
             }
