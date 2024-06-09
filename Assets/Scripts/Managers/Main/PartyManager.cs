@@ -18,7 +18,6 @@ public class PartyManager : MonoBehaviour
 
     private GameObject combatSlots;
     private GameObject supportSlots;
-    private GameObject currentSlots;
 
     private Sprite emptySlot;
 
@@ -36,28 +35,31 @@ public class PartyManager : MonoBehaviour
 
         combatSlots = partyScreen.transform.Find("Party Display/Combat Slots").gameObject;
         supportSlots = partyScreen.transform.Find("Party Display/Support Slots").gameObject;
-        currentSlots = combatSlots.transform.Find("Slots").gameObject;
 
         emptySlot = Resources.Load<Sprite>("Party/Empty Slot");
 
         createPartyFiles();
     }
 
+    public void setCombatDisplay()
+    {
+        MainAnimationManager.instance.StopAllCoroutines();
+        MainAnimationManager.instance.startCombatSlideIn(combatSlots, supportSlots, 0f);
+    }
+
     public void showCombatSlideIn()
     {
         MainAnimationManager.instance.startCombatSlideIn(combatSlots, supportSlots, 1f);
-        UnitManager.instance.setUpUnitList("Party", "C");
-        currentSlots = combatSlots.transform.Find("Slots").gameObject;
+        UnitManager.instance.formatUnits("Party", "C");
     }
 
     public void showSupportSlideIn()
     {
         MainAnimationManager.instance.startSupportSlideIn(combatSlots, supportSlots, 1f);
-        UnitManager.instance.setUpUnitList("Party", "S");
-        currentSlots = supportSlots.transform.Find("Slots").gameObject;
+        UnitManager.instance.formatUnits("Party", "S");
     }
 
-    public void setUpDropdown()
+    public void loadDropdown()
     {
         List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>();
 
@@ -85,7 +87,7 @@ public class PartyManager : MonoBehaviour
         dropdown.options = options;
     }
 
-    public void setUpDropdown(string oldName, string newName)
+    public void changeDropdownName(string oldName, string newName)
     {
         List<TMP_Dropdown.OptionData> options = dropdown.options;
         int index = options.FindIndex(s => s.text == oldName);
@@ -105,10 +107,10 @@ public class PartyManager : MonoBehaviour
         partyTitle.onEndEdit.AddListener(delegate { changePartyName(dropdown.value + 1); });
 
         resetSlotImage();
-        setUpPartySlots();
+        loadParty();
     }
 
-    public void setUpPartySlots()
+    public void loadParty()
     {
         FileInfo fi = new FileInfo(Application.dataPath + "/Resources/Data/Party" + currentParty + ".txt");
 
@@ -136,7 +138,7 @@ public class PartyManager : MonoBehaviour
         }
     }
 
-    public void updatePartyMember(int slot, PartyUnit unit, string type)
+    public void updatePartySlotUnit(int slot, PartyUnit unit, string type)
     {
         FileInfo fi = new FileInfo(Application.dataPath + "/Resources/Data/Party" + currentParty + ".txt");
 
@@ -149,26 +151,17 @@ public class PartyManager : MonoBehaviour
             using (StreamReader sr = new StreamReader(fs))
             {
                 party = JsonUtility.FromJson<Party>(sr.ReadToEnd());
+            }
 
-                if (type == "C") units = party.combatUnits;
-                else units = party.supportUnits;
-
-                int currentSlotIndex = units.FindIndex(s => s.cardid == unit.cardid);
-
-                if (currentSlotIndex >= 0)
-                {
-                    removeSlotImage(units[currentSlotIndex].slot);
-                    units.RemoveAt(currentSlotIndex);
-                }
-
-                int slotIndex = units.FindIndex(s => s.slot == slot);
-
-                if (slotIndex >= 0)
-                {
-                    units[slotIndex] = unit;
-                } else {
-                    units.Add(unit);
-                }
+            if (type == "C")
+            {
+                removeUnit(unit.cardid, combatSlots, party.combatUnits);
+                addUnit(slot, unit, party.combatUnits);
+            }
+            else
+            {
+                removeUnit(unit.cardid, supportSlots, party.supportUnits);
+                addUnit(slot, unit, party.supportUnits);
             }
 
             using (StreamWriter sw = fi.CreateText())
@@ -178,15 +171,74 @@ public class PartyManager : MonoBehaviour
         }
     }
 
+    public void removeFromParty(string id, string type)
+    {
+        for (int i = 1; i <= totalParties; i++)
+        {
+            FileInfo fi = new FileInfo(Application.dataPath + "/Resources/Data/Party" + i + ".txt");
+
+            if (fi.Exists)
+            {
+                FileStream fs = fi.Open(FileMode.Open, FileAccess.Read);
+                Party party;
+
+                using (StreamReader sr = new StreamReader(fs))
+                {
+                    party = JsonUtility.FromJson<Party>(sr.ReadToEnd());
+                }
+
+                if (type == "C") removeUnit(id, combatSlots, party.combatUnits);
+                else removeUnit(id, supportSlots, party.supportUnits);
+
+                using (StreamWriter sw = fi.CreateText())
+                {
+                    sw.WriteLine(JsonUtility.ToJson(party));
+                }
+            }
+        }
+    }
+
+    private void addUnit(int slot, PartyUnit unit, List<PartyUnit> units)
+    {
+        int slotIndex = units.FindIndex(s => s.slot == slot);
+
+        if (slotIndex >= 0)
+        {
+            units[slotIndex] = unit;
+        }
+        else
+        {
+            units.Add(unit);
+        }
+    }
+
+    private void removeUnit(string id, GameObject currentSlots, List<PartyUnit> units)
+    {
+        int index = units.FindIndex(s => s.cardid == id);
+
+        if (index >= 0)
+        {
+            Debug.Log("Removing from party...");
+
+            removeSlotImage(currentSlots, units[index].slot);
+            units.RemoveAt(index);
+        }
+    }
+
     private void resetSlotImage()
     {
-        foreach (Transform child in currentSlots.transform)
+        foreach (Transform child in combatSlots.transform.Find("Slots"))
+        {
+            child.GetComponent<Image>().sprite = emptySlot;
+        }
+
+        foreach (Transform child in supportSlots.transform.Find("Slots"))
         {
             child.GetComponent<Image>().sprite = emptySlot;
         }
     }
 
-    private void removeSlotImage(int slotNum)
+    private void removeSlotImage(GameObject currentSlots, int slotNum)
     {
         GameObject slot = currentSlots.transform.Find("Slot " + slotNum).gameObject;
         slot.GetComponent<Image>().sprite = emptySlot;
@@ -216,7 +268,7 @@ public class PartyManager : MonoBehaviour
                 sw.WriteLine(JsonUtility.ToJson(party));
             }
 
-            setUpDropdown(oldName, party.name);
+            changeDropdownName(oldName, party.name);
         }
     }
 

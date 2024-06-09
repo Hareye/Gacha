@@ -32,7 +32,8 @@ namespace objects
     [Serializable]
     public class UnitsObject
     {
-        public UnitObject[] units;
+        //public UnitObject[] units;
+        public List<UnitObject> units;
     }
 
     [Serializable]
@@ -79,6 +80,17 @@ namespace objects
         public Party(string n)
         {
             name = n;
+        }
+    }
+
+    [Serializable]
+    public class SerializableList<T>
+    {
+        public List<T> list;
+
+        public SerializableList()
+        {
+            list = new List<T>();
         }
     }
 }

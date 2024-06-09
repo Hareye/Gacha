@@ -19,14 +19,12 @@ public class MainManager : MonoBehaviour
     private GameObject partyScreen;
 
     private GameObject currentScreen;
+    private string currentScreenName;
     private GameObject currentBody;
     private GameObject currentBar;
 
     private GameObject unitScreenList;
     private GameObject partyScreenList;
-
-    private int unitScreenListWidth = 1750;
-    private int partyScreenListWidth = 1105;
 
     // Start is called before the first frame update
     void Start()
@@ -39,6 +37,7 @@ public class MainManager : MonoBehaviour
         partyScreen = canvas.transform.Find("Party Screen").gameObject;
 
         currentScreen = homeScreen;
+        currentScreenName = "Home";
         currentBody = unitInfoScreen.transform.Find("Panel/Body/Stats").gameObject;
         currentBar = unitInfoScreen.transform.Find("Panel/Bar/Stats").gameObject;
 
@@ -61,6 +60,7 @@ public class MainManager : MonoBehaviour
         currentScreen.SetActive(false);
 
         currentScreen = nextScreen;
+        currentScreenName = screen;
         currentScreen.SetActive(true);
 
         if (screen.Equals("Unit"))
@@ -70,10 +70,10 @@ public class MainManager : MonoBehaviour
                 StartCoroutine(UnitManager.instance.loadUnits(screen));
             } else
             {
-                UnitManager.instance.setUpUnitList(screen);
+                UnitManager.instance.formatUnits(screen);
             }
             
-            UnitManager.instance.setUpCharacters(unitScreenList.transform, unitScreenListWidth);
+            UnitManager.instance.formatCharacterList(unitScreenList.transform);
         }
 
         if (screen.Equals("Party"))
@@ -83,13 +83,18 @@ public class MainManager : MonoBehaviour
                 StartCoroutine(UnitManager.instance.loadUnits(screen, "C"));
             } else
             {
-                UnitManager.instance.setUpUnitList(screen, "C");
+                UnitManager.instance.formatUnits(screen, "C");
             }
 
-            UnitManager.instance.setUpCharacters(partyScreenList.transform, partyScreenListWidth);
-            PartyManager.instance.setUpDropdown();
+            UnitManager.instance.formatCharacterList(partyScreenList.transform);
+            PartyManager.instance.loadDropdown();
             PartyManager.instance.switchParty();
         }
+    }
+
+    public string getCurrentScreenName()
+    {
+        return currentScreenName;
     }
 
     private void setBody(string tab)

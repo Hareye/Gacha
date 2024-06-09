@@ -29,7 +29,7 @@ public class MainAnimationManager : MonoBehaviour
         float sCurrentPos = sTransform.localPosition.x;
         float cNewPos = -605;
 
-        for (float i = 0; i <= seconds; i += Time.deltaTime)
+        for (float i = 0; i < seconds; i += Time.deltaTime)
         {
             cTransform.localPosition = new Vector2(i * (cNewPos / seconds), 0);
             sTransform.localPosition = new Vector2(sCurrentPos - ((sCurrentPos / seconds) * i), 0);
@@ -48,7 +48,7 @@ public class MainAnimationManager : MonoBehaviour
         float cCurrentPos = cTransform.localPosition.x;
         float sNewPos = 605;
 
-        for (float i = 0; i <= seconds; i += Time.deltaTime)
+        for (float i = 0; i < seconds; i += Time.deltaTime)
         {
             sTransform.localPosition = new Vector2(i * (sNewPos / seconds), 0);
             cTransform.localPosition = new Vector2(cCurrentPos - ((cCurrentPos / seconds) * i), 0);

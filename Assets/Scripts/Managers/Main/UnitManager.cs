@@ -30,10 +30,12 @@ public class UnitManager : MonoBehaviour
     private GameObject unitBar;
     private GameObject characters;
 
-
     private Color32 urColor;
     private Color32 srColor;
     private Color32 rColor;
+
+    private Material selectMat;
+    private List<GameObject> selectedUnits = new List<GameObject>();
 
     private UnitsObject units;
     private bool unitsLoaded;
@@ -56,21 +58,51 @@ public class UnitManager : MonoBehaviour
         srColor = new Color32(185, 67, 255, 255);
         rColor = new Color32(73, 130, 255, 255);
 
+        selectMat = Resources.Load<Material>("Shaders/Gacha/SelectMask");
+
         unitsLoaded = false;
         viewMode = true;
+    }
+
+    public void dismissUnits()
+    {
+        StartCoroutine(dismissUnitsProcess(getIdentifiers(selectedUnits)));
+    }
+
+    public void toggleSelect(GameObject unit)
+    {
+        if (unit.GetComponent<Image>().material != selectMat)
+        {
+            unit.GetComponent<Image>().material = selectMat;
+            selectedUnits.Add(unit);
+        }
+        else
+        {
+            unit.GetComponent<Image>().material = null;
+            selectedUnits.Remove(unit);
+        }
     }
 
     public void toggleMode()
     {
         viewMode = !viewMode;
 
-        if (viewMode) unitBar.transform.Find("Mode/Text").GetComponent<TextMeshProUGUI>().text = "Viewing";
-        else unitBar.transform.Find("Mode/Text").GetComponent<TextMeshProUGUI>().text = "Dismissing";
+        if (viewMode)
+        {
+            unitBar.transform.Find("Mode/Text").GetComponent<TextMeshProUGUI>().text = "Viewing";
+            unitBar.transform.Find("Confirm").gameObject.SetActive(false);
+            removeSelected();
+        }
+        else
+        {
+            unitBar.transform.Find("Mode/Text").GetComponent<TextMeshProUGUI>().text = "Dismissing";
+            unitBar.transform.Find("Confirm").gameObject.SetActive(true);
+        }
     }
 
-    public void setUpCharacters(Transform transform, int width)
+    public void formatCharacterList(Transform transform)
     {
-        Debug.Log("Setting up characters...");
+        Debug.Log("Formatting character list...");
 
         RectTransform characterTransform = characters.transform.GetComponent<RectTransform>();
         RectTransform contentTransform = characters.transform.Find("Viewport/Content").GetComponent<RectTransform>();
@@ -120,14 +152,14 @@ public class UnitManager : MonoBehaviour
         stats.transform.Find("Stats/SPD/Text").GetComponent<TextMeshProUGUI>().text = unit.spd.ToString();
     }
 
-    public void setUpUnitList(string screen, string type = null)
+    public void formatUnits(string screen, string type = null)
     {
         if (screen.Equals("Unit"))
         {
             int cardsPerRow = 8;
             float startX = -752.5f;
 
-            modifyUnitList(cardsPerRow, startX, unitPrefab, type);
+            rebuildUnitList(cardsPerRow, startX, unitPrefab, type);
         }
 
         if (screen.Equals("Party"))
@@ -135,14 +167,19 @@ public class UnitManager : MonoBehaviour
             int cardsPerRow = 5;
             float startX = -430f;
 
-            modifyUnitList(cardsPerRow, startX, unitPartyPrefab, type);
+            rebuildUnitList(cardsPerRow, startX, unitPartyPrefab, type);
         }
     }
 
     public IEnumerator loadUnits(string screen, string type = null)
     {
         yield return StartCoroutine(loadUnitsProcess());
-        setUpUnitList(screen, type);
+        formatUnits(screen, type);
+    }
+
+    public bool getViewMode()
+    {
+        return viewMode;
     }
 
     public bool getUnitsLoaded()
@@ -150,7 +187,17 @@ public class UnitManager : MonoBehaviour
         return unitsLoaded;
     }
 
-    private void modifyUnitList(int cardsPerRow, float startX, GameObject unitPrefab, string type = null)
+    private void removeSelected()
+    {
+        foreach (GameObject unit in selectedUnits)
+        {
+            unit.GetComponent<Image>().material = null;
+        }
+
+        selectedUnits.Clear();
+    }
+
+    private void rebuildUnitList(int cardsPerRow, float startX, GameObject unitPrefab, string type = null)
     {
         GameObject content = characters.transform.Find("Viewport/Content").gameObject;
         int rowWidth = (cardsPerRow * 185) + ((cardsPerRow + 1) * 30);
@@ -190,6 +237,52 @@ public class UnitManager : MonoBehaviour
 
             count++;
         }
+    }
+
+    private SerializableList<string> getIdentifiers(List<GameObject> selectedUnits)
+    {
+        SerializableList<string> identifiers = new SerializableList<string>();
+
+        foreach (GameObject unit in selectedUnits)
+        {
+            identifiers.list.Add(unit.GetComponent<Unit>().unit.cardid);
+        }
+
+        return identifiers;
+    }
+
+    private IEnumerator dismissUnitsProcess(SerializableList<string> identifiers)
+    {
+        Debug.Log("Dismissing units...");
+
+        var list = new List<KeyValuePair<string, string>>()
+        {
+            new KeyValuePair<string, string>("list", JsonUtility.ToJson(identifiers)),
+        };
+
+        // Set up loading here
+
+        IEnumerator dismissCoroutine = server.sendRequestWithAuth(endpoints.dismiss, list);
+        yield return StartCoroutine(dismissCoroutine);
+
+        string status = dismissCoroutine.Current as string;
+
+        if (status.Equals("success"))
+        {
+            selectedUnits.Clear();
+
+            foreach (string id in identifiers.list)
+            {
+                int index = units.units.FindIndex(s => s.cardid == id);
+
+                PartyManager.instance.removeFromParty(id, units.units[index].combattype);
+                units.units.RemoveAt(index);
+            }
+
+            formatUnits(MainManager.instance.getCurrentScreenName());
+        }
+
+        // Finish loading here
     }
 
     private IEnumerator loadUnitsProcess()

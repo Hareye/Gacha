@@ -20,7 +20,7 @@ public class PartySlot : MonoBehaviour, IDropHandler
         {
             GetComponent<Image>().sprite = eventData.pointerDrag.GetComponent<Image>().sprite;
 
-            PartyManager.instance.updatePartyMember(slot, setUpNewUnit(eventData.pointerDrag.GetComponent<Unit>().unit), type);
+            PartyManager.instance.updatePartySlotUnit(slot, setUpNewUnit(eventData.pointerDrag.GetComponent<Unit>().unit), type);
         }
     }
 
